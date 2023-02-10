@@ -3,12 +3,7 @@
 
 // #define V4L2_CAP_VIDEO_CAPTURE 0x00000001
 
-#define DBG_PRINTF(fmt, args...)  \
-do\
-{\
-    printf("<<File:%s  Line:%d  Function:%s>> ", __FILE__, __LINE__, __FUNCTION__);\
-    printf(fmt, ##args);\
-}while(0)
+
 
 
 // struct v4l2_capability
