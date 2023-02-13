@@ -16,5 +16,6 @@ typedef struct CAMERA_INIT{
 }CAMERA_INIT;
 
 int camera_init(CAMERA_INIT* parameter);
+int camera_get_a_frame(int* pfd, unsigned char** dest);
 int camera_exit(int* pfd);
 #endif

@@ -13,7 +13,7 @@
 #include "log.h"
 #include "camera.h"
 
-int main(void)
+int take_photo(void)
 {
 	int ret = -1;
 	CAMERA_INIT camera_int;
@@ -21,8 +21,9 @@ int main(void)
 	camera_int.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	// vfmt 设置视频采集格式
 	camera_int.vfmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;//摄像头采集
-	camera_int.vfmt.fmt.pix.width = 640;//设置宽（不能任意）
-	camera_int.vfmt.fmt.pix.height = 480;//设置高
+	// 240*320 640*480 1280*720 1920*1080
+	camera_int.vfmt.fmt.pix.width = 320;//设置宽（不能任意）
+	camera_int.vfmt.fmt.pix.height = 240;//设置高
 	camera_int.vfmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
 	// reqbuffer 内核空间
 	camera_int.reqbuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -35,41 +36,28 @@ int main(void)
 
 	char filename[16];
 	int i = 0;
+	unsigned char *_data;
 	for (i = 0; i<4; i++)
 	{
-		DBG_PRINTF("// 把一帧数据放入缓存队列\n");
-		ret = ioctl(camera_int.fd, VIDIOC_QBUF, &camera_int.mapbuffer);
-		if (ret < 0) 
+		ret = camera_get_a_frame(&camera_int.fd, &_data);
+		if (ret <= 0)
 		{
-			perror("放入缓存队列失败");
-		}
-		DBG_PRINTF("// 从队列中提取一帧数据\n");
-		fd_set fds;
-		FD_ZERO(&fds);
-		FD_SET(camera_int.fd, &fds);
-		struct timeval tv = {0};
-		tv.tv_sec = 1;
-		tv.tv_usec = 0;
-		int r = select(camera_int.fd+1, &fds, NULL, NULL, &tv);
-		if(-1 == r)
-		{
-			perror("Waiting for Frame");
+			perror("get_a_frame error");
 			continue;;
 		}
-		ret = ioctl(camera_int.fd, VIDIOC_DQBUF, &camera_int.mapbuffer);
-		if (ret < 0)
-		{
-			perror("提取数据失败");
-		}
-
 		sprintf(filename, "/mnt/my_%d.jpg", i);
 		FILE *fp=fopen(filename, "w");
-		fwrite(camera_int.mptr, camera_int.mapbuffer.length, 1, fp);
-		// fdatasync(fp);
+		fwrite(_data, ret, 1, fp);
 		fclose(fp);
 	}
-	
+	sync();
 
 	camera_exit(&camera_int.fd);
+	return 0;
+}
+
+int main(int argc, char* argv[])
+{
+	take_photo();
 	return 0;
 }

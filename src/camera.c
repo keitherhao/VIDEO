@@ -113,6 +113,36 @@ int camera_init(CAMERA_INIT* _p)
     return 0;
 }
 
+int camera_get_a_frame(int* pfd, unsigned char** dest)
+{
+	int ret = -1;
+	CAMERA_INIT* _p = container_of(pfd, CAMERA_INIT, fd);
+	DBG_PRINTF("// 把一帧数据放入缓存队列\n");
+	ret = ioctl(_p->fd, VIDIOC_QBUF, &_p->mapbuffer);
+	if (ret < 0) 
+	{
+		perror("放入缓存队列失败");
+	}
+	DBG_PRINTF("// 从队列中提取一帧数据\n");
+	fd_set fds;
+	FD_ZERO(&fds);
+	FD_SET(_p->fd, &fds);
+	struct timeval tv = {0};
+	tv.tv_sec = 1;
+	tv.tv_usec = 0;
+	int r = select(_p->fd+1, &fds, NULL, NULL, &tv);
+	if(-1 == r)
+	{
+		perror("Waiting for Frame");
+	}
+	ret = ioctl(_p->fd, VIDIOC_DQBUF, &_p->mapbuffer);
+	if (ret < 0)
+	{
+		perror("提取数据失败");
+	}
+	*dest = _p->mptr;
+	return _p->mapbuffer.length;
+}
 
 int camera_exit(int* pfd)
 {
