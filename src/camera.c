@@ -7,115 +7,107 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+// linux
 #include <linux/videodev2.h>
 // my
 #include "linux/list_.h"
 #include "log.h"
 #include "camera.h"
 
-int camera_init(CAMERA_INIT* parameter)
+int camera_init(CAMERA_INIT* _p)
 {
     int ret = -1;
     DBG_PRINTF("// 1.打开设备\n");
-	// 1.打开设备
-	parameter->fd = open("/dev/video0", O_RDWR);//14,15,21,22
-	if(parameter->fd < 0)
+	// _p->fd = open(_p->dev_naem, O_RDWR | O_NONBLOCK, 0);
+	_p->fd = open(_p->dev_naem, O_RDWR);
+	if(_p->fd < 0)
 	{
 		perror("打开设备失败");
 		return -1;
 	}
     
+	DBG_PRINTF("// 获取驱动信息\n");
+    struct v4l2_capability cap;
+    ret = ioctl(_p->fd, VIDIOC_QUERYCAP, &cap);
+    if (ret < 0) {
+        printf("VIDIOC_QUERYCAP failed (%d)\n", ret);
+        return ret;
+    }
+    printf("Capability Informations:\n");
+    printf("\tdriver: %s\n", cap.driver);
+    printf("\tcard: %s\n", cap.card);
+    printf("\tbus_info: %s\n", cap.bus_info);
+    printf("\tversion: %08X\n", cap.version);
+    printf("\tcapabilities: %08X\n", cap.capabilities);
+
     DBG_PRINTF("// 2.获取摄像头支持的格式ioctl(文件描述符， 命令， 与命令对应的结构体)\n");
-	// 2.获取摄像头支持的格式ioctl(文件描述符， 命令， 与命令对应的结构体)
-	parameter->v4fmt;
-	parameter->v4fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	int i=0;
+	struct v4l2_fmtdesc v4fmt;
+	v4fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	int i = 0;
 	while(1)
 	{
-		parameter->v4fmt.index = i++;  
-		ret = ioctl(parameter->fd, VIDIOC_ENUM_FMT, &parameter->v4fmt);
+		v4fmt.index = i++;  
+		ret = ioctl(_p->fd, VIDIOC_ENUM_FMT, &v4fmt);
 		if(ret < 0)
 		{
 			if (i == 1)
 				perror("获取失败");
 			break;
 		}
-		printf("index=%d\n", parameter->v4fmt.index);
-		printf("flags=%d\n", parameter->v4fmt.flags);
-		printf("description=%s\n", parameter->v4fmt.description);
-		unsigned char *p = (unsigned char *)&parameter->v4fmt.pixelformat;
-		printf("pixelformat=%c%c%c%c\n", p[0],p[1],p[2],p[3]);
-		printf("reserved=%d\n", parameter->v4fmt.reserved[0]);
+		printf("supported formats -%d- :\n", i);
+		printf("\tindex: %d\n", v4fmt.index);
+		printf("\tflags: %d\n", v4fmt.flags);
+		printf("\tdescription: %s\n", v4fmt.description);
+		unsigned char *set_pf = (unsigned char *)&v4fmt.pixelformat;
+		printf("\tpixelformat: %c%c%c%c\n", set_pf[0],set_pf[1],set_pf[2],set_pf[3]);
+		printf("\treserved: %d\n", v4fmt.reserved[0]);
 	}
 
-    DBG_PRINTF("// 3.设置采集格式\n");
-    // 3.设置采集格式
-	parameter->vfmt;
-	parameter->vfmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;//摄像头采集
-	parameter->vfmt.fmt.pix.width = 640;//设置宽（不能任意）
-	parameter->vfmt.fmt.pix.height = 480;//设置高
-	// vfmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;//设置视频采集格式
-	parameter->vfmt.fmt.pix.pixelformat = V4L2_PIX_FMT_MJPEG;
-	ret = ioctl(parameter->fd, VIDIOC_S_FMT, &parameter->vfmt);
+    DBG_PRINTF("// 设置采集格式\n");
+	ret = ioctl(_p->fd, VIDIOC_S_FMT, &_p->vfmt);
 	if(ret < 0)
 	{
 		perror("设置格式失败");
 	}
-
-	memset(&parameter->vfmt, 0, sizeof(parameter->vfmt));
-	parameter->vfmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	ret  = ioctl(parameter->fd, VIDIOC_G_FMT, &parameter->vfmt);
+	DBG_PRINTF("// 读取当前的采集格式\n");
+	memset(&_p->vfmt, 0, sizeof(_p->vfmt));
+	_p->vfmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	ret  = ioctl(_p->fd, VIDIOC_G_FMT, &_p->vfmt);
 	if(ret < 0)
 	{
 		perror("获取格式失败");
 	}
-
-	if(parameter->vfmt.fmt.pix.width == 640 && parameter->vfmt.fmt.pix.height == 480 && 
-		(parameter->vfmt.fmt.pix.pixelformat == V4L2_PIX_FMT_YUYV || parameter->vfmt.fmt.pix.pixelformat == V4L2_PIX_FMT_MJPEG))
-	{
-		printf("设置成功\n");
-	}else
-	{
-		printf("设置失败\n");
-	}
+	printf("Formatted :\n");
+	printf("\twidth: %d\n", _p->vfmt.fmt.pix.width);
+	printf("\theight: %d\n", _p->vfmt.fmt.pix.height);
+	unsigned char *get_pf = (unsigned char *)&_p->vfmt.fmt.pix.pixelformat;
+	printf("\tpixelformat: %c%c%c%c\n", get_pf[0],get_pf[1],get_pf[2],get_pf[3]);
 
     DBG_PRINTF("// 4.申请内核空间\n");
-    // 4.申请内核空间
-	parameter->reqbuffer;
-	parameter->reqbuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	parameter->reqbuffer.count = 4; //申请4个缓冲区
-	parameter->reqbuffer.memory = V4L2_MEMORY_MMAP ;//映射方式
-	ret  = ioctl(parameter->fd, VIDIOC_REQBUFS, &parameter->reqbuffer);
+	ret  = ioctl(_p->fd, VIDIOC_REQBUFS, &_p->reqbuffer);
 	if(ret < 0)
 	{
 		perror("申请队列空间失败");
 	}
 
     DBG_PRINTF("// 5.映射\n");
-    // 5.映射
-	// parameter->*mptr[4];//保存映射后用户空间的首地址
-    // parameter->size[4];
-	parameter->mapbuffer;
-	//初始化type, index
-	parameter->mapbuffer.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	for(int i=0; i<4; i++)
+	// 读取缓存
+	ret = ioctl(_p->fd, VIDIOC_QUERYBUF, &_p->mapbuffer);//从内核空间中查询一个空间做映射
+	if(ret < 0)
 	{
-		parameter->mapbuffer.index = i;
-		ret = ioctl(parameter->fd, VIDIOC_QUERYBUF, &parameter->mapbuffer);//从内核空间中查询一个空间做映射
-		if(ret < 0)
-		{
-			perror("查询内核空间队列失败");
-		}
-		parameter->mptr[i] = (unsigned char *)mmap(NULL, parameter->mapbuffer.length, PROT_READ|PROT_WRITE, 
-                                            MAP_SHARED, parameter->fd, parameter->mapbuffer.m.offset);
-            parameter->size[i]=parameter->mapbuffer.length;
+		perror("查询内核空间队列失败");
+	}
+	DBG_PRINTF("mapbuffer.m.offset = %d\n", _p->mapbuffer.m.offset);
+	// 转换成相对地址
+	_p->mptr = (unsigned char *)mmap(NULL, _p->mapbuffer.length, PROT_READ|PROT_WRITE, MAP_SHARED, _p->fd, _p->mapbuffer.m.offset);
+	_p->size = _p->mapbuffer.length;
 
-		//通知使用完毕--‘放回去’
-		ret  = ioctl(parameter->fd, VIDIOC_QBUF, &parameter->mapbuffer);
-		if(ret < 0)
-		{
-			perror("放回失败");
-		}
+
+	DBG_PRINTF("// 开始采集\n");
+	ret = ioctl(_p->fd, VIDIOC_STREAMON, &_p->type);
+	if(ret < 0)
+	{
+		perror("开启失败");
 	}
 
     return 0;
@@ -126,18 +118,14 @@ int camera_exit(int* pfd)
 {
     int ret = -1;
     CAMERA_INIT* _p = container_of(pfd, CAMERA_INIT, fd);
-    int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     DBG_PRINTF("// 8. 停止采集\n");
-    // 8. 停止采集
     ret = ioctl(_p->fd, VIDIOC_STREAMOFF, &_p->type);
 
     DBG_PRINTF("// 9.释放映射\n");
-    // 9.释放映射
-    for(int i=0; i<4; i++)
-    munmap(_p->mptr[i], _p->size[i]);
+	int i=0;
+    munmap(_p->mptr, _p->size);
 
     DBG_PRINTF("// 10.关闭设备\n");
-	//10.关闭设备
 	close(_p->fd);
     return 0;
 }
