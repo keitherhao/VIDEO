@@ -10,8 +10,10 @@
 #include <linux/videodev2.h>
 
 #include "main.h"
+#define MY_LOG_ON	1
 #include "log.h"
 #include "camera.h"
+
 
 int take_photo(void)
 {
