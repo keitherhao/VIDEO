@@ -51,6 +51,9 @@ int take_photo(void)
 		FILE *fp=fopen(filename, "w");
 		fwrite(_data, ret, 1, fp);
 		fclose(fp);
+		fflush(stderr);
+	    fprintf(stderr, ".");
+	    fflush(stdout);
 	}
 	sync();
 
