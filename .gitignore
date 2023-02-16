@@ -4,3 +4,14 @@ bin
 bin/*
 build
 build/*
+
+# make ko
+*.o
+*.ko
+*.ko.cmd
+*.o.cmd
+*.mod.c
+*.mod.o
+*.tmp_versions
+*Module.symvers
+*modules.order
