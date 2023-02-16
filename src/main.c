@@ -39,13 +39,20 @@ int take_photo(void)
 	char filename[16];
 	int i = 0;
 	unsigned char *_data;
-	for (i = 0; i<4; i++)
+	for (i = 0; i<100; i++)
 	{
 		ret = camera_get_a_frame(&camera_int.fd, &_data);
-		if (ret <= 0)
+		if (ret < 0)
 		{
 			perror("get_a_frame error");
-			continue;;
+			// continue;
+			printf("[ %s ] line #%d\tret = %d\n", __FUNCTION__, __LINE__, ret);
+			camera_exit(&camera_int.fd);
+			while(camera_init(&camera_int) < 0)
+			{
+				sleep(3);
+				printf("[ %s ] line #%d\n", __FUNCTION__, __LINE__);
+			}
 		}
 		sprintf(filename, "/mnt/my_%d.jpg", i);
 		FILE *fp=fopen(filename, "w");
@@ -55,6 +62,7 @@ int take_photo(void)
 	    fprintf(stderr, ".");
 	    fflush(stdout);
 	}
+	fprintf(stderr, "\n");
 	sync();
 
 	camera_exit(&camera_int.fd);

@@ -68,6 +68,7 @@ int camera_init(CAMERA_INIT* _p)
 	if(ret < 0)
 	{
 		perror("设置格式失败");
+		return ret;
 	}
 	DBG_PRINTF("// 读取当前的采集格式\n");
 	memset(&_p->vfmt, 0, sizeof(_p->vfmt));
@@ -76,6 +77,7 @@ int camera_init(CAMERA_INIT* _p)
 	if(ret < 0)
 	{
 		perror("获取格式失败");
+		return ret;
 	}
 	printf("Formatted :\n");
 	printf("\twidth: %d\n", _p->vfmt.fmt.pix.width);
@@ -88,6 +90,7 @@ int camera_init(CAMERA_INIT* _p)
 	if(ret < 0)
 	{
 		perror("申请队列空间失败");
+		return ret;
 	}
 
     DBG_PRINTF("// 5.映射\n");
@@ -96,6 +99,7 @@ int camera_init(CAMERA_INIT* _p)
 	if(ret < 0)
 	{
 		perror("查询内核空间队列失败");
+		return ret;
 	}
 	DBG_PRINTF("mapbuffer.m.offset = %d\n", _p->mapbuffer.m.offset);
 	// 转换成相对地址
@@ -108,6 +112,7 @@ int camera_init(CAMERA_INIT* _p)
 	if(ret < 0)
 	{
 		perror("开启失败");
+		return ret;
 	}
 
     return 0;
@@ -122,26 +127,31 @@ int camera_get_a_frame(int* pfd, unsigned char** dest)
 	if (ret < 0) 
 	{
 		perror("放入缓存队列失败");
+		return ret;
 	}
 	DBG_PRINTF("// 从队列中提取一帧数据\n");
 	fd_set fds;
 	FD_ZERO(&fds);
 	FD_SET(_p->fd, &fds);
 	struct timeval tv = {0};
-	tv.tv_sec = 1;
+	tv.tv_sec = 1; 
 	tv.tv_usec = 0;
 	int r = select(_p->fd+1, &fds, NULL, NULL, &tv);
 	if(-1 == r)
 	{
 		perror("Waiting for Frame");
 	}
+	// memset(&(_p->mapbuffer), 0x00, sizeof(struct v4l2_buffer));
 	ret = ioctl(_p->fd, VIDIOC_DQBUF, &_p->mapbuffer);
 	if (ret < 0)
 	{
 		perror("提取数据失败");
+		return ret;
 	}
-	*dest = _p->mptr;
-	return _p->mapbuffer.length;
+	// if (_p->mapbuffer.length > 0)
+		return _p->mapbuffer.length;
+	// else 
+		// return ret;
 }
 
 int camera_exit(int* pfd)
