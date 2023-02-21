@@ -122,7 +122,7 @@ int camera_get_a_frame(int* pfd, unsigned char** dest)
 {
 	int ret = -1;
 	CAMERA_INIT* _p = container_of(pfd, CAMERA_INIT, fd);
-	
+
 	DBG_PRINTF("// 把一帧数据放入缓存队列\n");
 	memset(_p->mptr, 0x00, _p->size);
 	ret = ioctl(_p->fd, VIDIOC_QBUF, &_p->mapbuffer);
@@ -146,7 +146,6 @@ int camera_get_a_frame(int* pfd, unsigned char** dest)
 	}
 
 	ret = ioctl(_p->fd, VIDIOC_DQBUF, &_p->mapbuffer);
-	printf("[ %s ] line #%d\n", __FUNCTION__, __LINE__);
 	if (ret < 0)
 	{
 		perror("提取数据失败");
