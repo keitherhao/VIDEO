@@ -122,13 +122,16 @@ int camera_get_a_frame(int* pfd, unsigned char** dest)
 {
 	int ret = -1;
 	CAMERA_INIT* _p = container_of(pfd, CAMERA_INIT, fd);
+	
 	DBG_PRINTF("// 把一帧数据放入缓存队列\n");
+	memset(_p->mptr, 0x00, _p->size);
 	ret = ioctl(_p->fd, VIDIOC_QBUF, &_p->mapbuffer);
 	if (ret < 0) 
 	{
 		perror("放入缓存队列失败");
 		return ret;
 	}
+
 	DBG_PRINTF("// 从队列中提取一帧数据\n");
 	fd_set fds;
 	FD_ZERO(&fds);
@@ -141,17 +144,16 @@ int camera_get_a_frame(int* pfd, unsigned char** dest)
 	{
 		perror("Waiting for Frame");
 	}
-	// memset(&(_p->mapbuffer), 0x00, sizeof(struct v4l2_buffer));
+
 	ret = ioctl(_p->fd, VIDIOC_DQBUF, &_p->mapbuffer);
+	printf("[ %s ] line #%d\n", __FUNCTION__, __LINE__);
 	if (ret < 0)
 	{
 		perror("提取数据失败");
 		return ret;
 	}
-	// if (_p->mapbuffer.length > 0)
-		return _p->mapbuffer.length;
-	// else 
-		// return ret;
+	*dest = _p->mptr;
+	return _p->mapbuffer.length;
 }
 
 int camera_exit(int* pfd)
