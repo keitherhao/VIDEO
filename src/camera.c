@@ -168,5 +168,6 @@ int camera_exit(int* pfd)
 
     DBG_PRINTF("// 10.关闭设备\n");
 	close(_p->fd);
+	_p->fd = -1;
     return 0;
 }
