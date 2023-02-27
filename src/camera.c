@@ -123,7 +123,7 @@ int camera_get_a_frame(int* pfd, unsigned char** dest)
 	int ret = -1;
 	CAMERA_INIT* _p = container_of(pfd, CAMERA_INIT, fd);
 
-	DBG_PRINTF("// 把一帧数据放入缓存队列\n");
+//	DBG_PRINTF("// 把一帧数据放入缓存队列\n");
 	memset(_p->mptr, 0x00, _p->size);
 	ret = ioctl(_p->fd, VIDIOC_QBUF, &_p->mapbuffer);
 	if (ret < 0) 
@@ -132,7 +132,7 @@ int camera_get_a_frame(int* pfd, unsigned char** dest)
 		return ret;
 	}
 
-	DBG_PRINTF("// 从队列中提取一帧数据\n");
+//	DBG_PRINTF("// 从队列中提取一帧数据\n");
 	fd_set fds;
 	FD_ZERO(&fds);
 	FD_SET(_p->fd, &fds);
@@ -164,7 +164,8 @@ int camera_exit(int* pfd)
 
     DBG_PRINTF("// 9.释放映射\n");
 	int i=0;
-    munmap(_p->mptr, _p->size);
+    ret = munmap(_p->mptr, _p->size);
+	printf("[ %s ] #%d ret = %d\n", __FUNCTION__, __LINE__, ret);
 
     DBG_PRINTF("// 10.关闭设备\n");
 	close(_p->fd);
