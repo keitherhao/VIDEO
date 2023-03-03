@@ -1,6 +1,6 @@
 #ifndef __LOG_H__
 #define __LOG_H__
-
+#define MY_LOG_ON	1
 #if MY_LOG_ON
 #define DBG_PRINTF(fmt, args...)  \
 do\
